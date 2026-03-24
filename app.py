@@ -19,7 +19,12 @@ st.title("📚 Smart Library System")
 
 def load_books():
     if os.path.exists(BOOK_FILE):
-        return pd.read_csv(BOOK_FILE)
+        df = pd.read_csv(BOOK_FILE)
+
+if 'image' not in df.columns:
+    df['image'] = "none"
+
+return df
 
     return pd.DataFrame(columns=[
     'book_id','title','author',
