@@ -1,3 +1,4 @@
-book_id,title,author,genre,quantity
-B001,1984,George Orwell,Dystopian,3
-B002,Python Basics,John Smith,Programming,5
+book_id,title,author,genre,quantity,image
+B001,Python Basics,John,Programming,5,https://picsum.photos/200
+B002,Data Science,Anna,Technology,3,https://picsum.photos/200
+B003,Math Book,Raj,Education,2,none
