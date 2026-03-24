@@ -25,8 +25,7 @@ if 'image' not in df.columns:
     df['image'] = "none"
 
 return df
-
-    return pd.DataFrame(columns=[
+return pd.DataFrame(columns=[
     'book_id','title','author',
     'genre','quantity','image'
     ])
