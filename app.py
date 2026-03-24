@@ -15,45 +15,88 @@ USER_FILE="users.csv"
 
 st.title("📚 Smart Library System")
 
-# ---------- FUNCTIONS ----------
+# ---------- SAFE LOAD FUNCTIONS ----------
 
 def load_books():
-    if os.path.exists(BOOK_FILE):
-        df = pd.read_csv(BOOK_FILE)
 
-if 'image' not in df.columns:
-    df['image'] = "none"
-return df
-return pd.DataFrame(columns=[
+    columns=[
     'book_id','title','author',
     'genre','quantity','image'
-    ])
+    ]
+
+    if os.path.exists(BOOK_FILE):
+
+        df=pd.read_csv(BOOK_FILE)
+
+        for col in columns:
+
+            if col not in df.columns:
+
+                if col=="image":
+                    df[col]="none"
+
+                elif col=="quantity":
+                    df[col]=0
+
+                else:
+                    df[col]=""
+
+        return df[columns]
+
+    return pd.DataFrame(columns=columns)
+
 
 def save_books(df):
+
     df.to_csv(BOOK_FILE,index=False)
 
-def load_borrow():
-    if os.path.exists(BORROW_FILE):
-        return pd.read_csv(BORROW_FILE)
 
-    return pd.DataFrame(columns=[
-    'user','book_id','borrow_date'
-    ])
+def load_borrow():
+
+    cols=['user','book_id','borrow_date']
+
+    if os.path.exists(BORROW_FILE):
+
+        df=pd.read_csv(BORROW_FILE)
+
+        for col in cols:
+
+            if col not in df.columns:
+
+                df[col]=""
+
+        return df[cols]
+
+    return pd.DataFrame(columns=cols)
+
 
 def save_borrow(df):
+
     df.to_csv(BORROW_FILE,index=False)
 
-def load_users():
-    if os.path.exists(USER_FILE):
-        return pd.read_csv(USER_FILE)
 
-    return pd.DataFrame(
-    columns=["username","password","role"]
-    )
+def load_users():
+
+    cols=['username','password','role']
+
+    if os.path.exists(USER_FILE):
+
+        df=pd.read_csv(USER_FILE)
+
+        for col in cols:
+
+            if col not in df.columns:
+
+                df[col]="user"
+
+        return df[cols]
+
+    return pd.DataFrame(columns=cols)
 
 # ---------- LOGIN ----------
 
 if "logged" not in st.session_state:
+
     st.session_state.logged=False
 
 if not st.session_state.logged:
@@ -61,6 +104,7 @@ if not st.session_state.logged:
     st.subheader("Login")
 
     user=st.text_input("Username")
+
     pw=st.text_input("Password",type="password")
 
     if st.button("Login"):
@@ -74,12 +118,14 @@ if not st.session_state.logged:
 
         if record.empty:
 
-            st.error("Invalid")
+            st.error("Invalid login")
 
         else:
 
             st.session_state.logged=True
+
             st.session_state.user=user
+
             st.session_state.role=record.iloc[0]['role']
 
             st.rerun()
@@ -93,13 +139,17 @@ st.sidebar.write("User:",st.session_state.user)
 if st.sidebar.button("Logout"):
 
     st.session_state.logged=False
+
     st.rerun()
 
 menu=st.sidebar.selectbox(
+
 "Menu",
-["Dashboard","Add","View",
-"Search","Issue","Return",
-"Edit","Delete","History","Analysis"]
+
+["Dashboard","Add Book","View Books",
+"Search","Issue Book","Return Book",
+"Delete Book","History","Analysis"]
+
 )
 
 # ---------- DASHBOARD ----------
@@ -107,87 +157,120 @@ menu=st.sidebar.selectbox(
 if menu=="Dashboard":
 
     df=load_books()
+
     borrow=load_borrow()
 
     col1,col2,col3=st.columns(3)
 
-    with col1:
-        st.metric("Titles",len(df))
+    col1.metric("Titles",len(df))
 
-    with col2:
-        st.metric(
-        "Books",
-        int(df.quantity.sum())
-        )
+    col2.metric(
+    "Total Books",
+    int(df.quantity.sum())
+    )
 
-    with col3:
-        st.metric(
-        "Issued",
-        len(borrow)
-        )
+    col3.metric(
+    "Issued",
+    len(borrow)
+    )
 
-# ---------- ADD ----------
+# ---------- ADD BOOK ----------
 
-if menu=="Add":
+if menu=="Add Book":
 
     st.subheader("Add Book")
 
-    id=st.text_input("ID")
+    id=st.text_input("Book ID")
+
     title=st.text_input("Title")
+
     author=st.text_input("Author")
+
     genre=st.text_input("Genre")
-    qty=st.number_input("Qty",0)
+
+    qty=st.number_input(
+    "Quantity",
+    min_value=0
+    )
+
     img=st.text_input("Image URL")
 
     if st.button("Add"):
 
         df=load_books()
 
-        df.loc[len(df.index)]=[
-        id,title,author,genre,qty,img
-        ]
+        if id in df.book_id.values:
 
-        save_books(df)
+            st.error("ID exists")
 
-        st.success("Added")
+        elif id=="" or title=="":
+
+            st.warning("Fill required fields")
+
+        else:
+
+            if img=="":
+                img="none"
+
+            new_row=pd.DataFrame([
+
+            {
+            "book_id":id,
+            "title":title,
+            "author":author,
+            "genre":genre,
+            "quantity":qty,
+            "image":img
+            }
+
+            ])
+
+            df=pd.concat(
+            [df,new_row],
+            ignore_index=True
+            )
+
+            save_books(df)
+
+            st.success("Book added")
 
 # ---------- VIEW ----------
 
-if menu=="View":
+if menu=="View Books":
 
     df=load_books()
 
-    page=st.number_input(
-    "Page",
-    min_value=1,
-    value=1
-    )
+    if df.empty:
 
-    start=(page-1)*5
-    end=start+5
+        st.warning("No books")
 
-    show=df.iloc[start:end]
+    else:
 
-    for i,row in show.iterrows():
+        for i,row in df.iterrows():
 
-        col1,col2=st.columns([1,3])
+            col1,col2=st.columns([1,3])
 
-        with col1:
+            with col1:
 
-            if "http" in str(row['image']):
-                st.image(row['image'])
+                if str(row.image).startswith("http"):
 
-        with col2:
+                    st.image(row.image)
 
-            st.write("###",row['title'])
+            with col2:
 
-            st.write("Author:",row['author'])
-            st.write("Genre:",row['genre'])
+                st.write("###",row.title)
 
-            if row['quantity']>0:
-                st.success("Available")
-            else:
-                st.error("Out")
+                st.write("Author:",row.author)
+
+                st.write("Genre:",row.genre)
+
+                if row.quantity>0:
+
+                    st.success("Available")
+
+                else:
+
+                    st.error("Out of stock")
 
 # ---------- SEARCH ----------
 
@@ -195,60 +278,58 @@ if menu=="Search":
 
     df=load_books()
 
-    title=st.text_input("Title")
-    genre=st.text_input("Genre")
+    key=st.text_input("Search")
 
-    result=df
+    if st.button("Search"):
 
-    if title!="":
+        result=df[
 
-        result=result[
-        result.title.str.contains(
-        title,case=False)
+        df.title.str.contains(
+        key,
+        case=False
+        )|
+
+        df.book_id.astype(str).str.contains(
+        key
+        )
+
         ]
 
-    if genre!="":
-
-        result=result[
-        result.genre.str.contains(
-        genre,case=False)
-        ]
-
-    st.dataframe(result)
-
-# ---------- ISSUE ----------
-
-if menu=="Issue":
-
-    df=load_books()
-    borrow=load_borrow()
-
-    user=st.text_input("User")
-    book_id=st.text_input("Book")
-
-    user_books=borrow[
-    borrow.user==user
-    ]
-
-    if len(user_books)>=3:
-
-        st.error("Max 3 books allowed")
-
-    elif st.button("Issue"):
-
-        if book_id not in df.book_id.values:
+        if result.empty:
 
             st.error("Not found")
 
         else:
 
+            st.dataframe(result)
+
+# ---------- ISSUE ----------
+
+if menu=="Issue Book":
+
+    df=load_books()
+
+    borrow=load_borrow()
+
+    user=st.text_input("User")
+
+    book=st.text_input("Book ID")
+
+    if st.button("Issue"):
+
+        if book not in df.book_id.values:
+
+            st.error("Book not found")
+
+        else:
+
             index=df[
-            df.book_id==book_id
+            df.book_id==book
             ].index[0]
 
             if df.loc[index,'quantity']==0:
 
-                st.error("Out")
+                st.error("Not available")
 
             else:
 
@@ -257,9 +338,11 @@ if menu=="Issue":
                 save_books(df)
 
                 borrow.loc[len(borrow.index)]=[
+
                 user,
-                book_id,
+                book,
                 datetime.date.today()
+
                 ]
 
                 save_borrow(borrow)
@@ -268,19 +351,23 @@ if menu=="Issue":
 
 # ---------- RETURN ----------
 
-if menu=="Return":
+if menu=="Return Book":
 
     df=load_books()
+
     borrow=load_borrow()
 
     user=st.text_input("User")
-    book=st.text_input("Book")
+
+    book=st.text_input("Book ID")
 
     if st.button("Return"):
 
         record=borrow[
+
         (borrow.user==user)&
         (borrow.book_id==book)
+
         ]
 
         if record.empty:
@@ -288,26 +375,6 @@ if menu=="Return":
             st.error("No record")
 
         else:
-
-            days=(
-
-            pd.to_datetime(
-            datetime.date.today()
-
-            )-
-
-            pd.to_datetime(
-            record.iloc[0]['borrow_date']
-
-            )
-
-            ).days
-
-            fine=0
-
-            if days>7:
-
-                fine=(days-7)*2
 
             index=df[
             df.book_id==book
@@ -325,42 +392,9 @@ if menu=="Return":
 
             st.success("Returned")
 
-            if fine>0:
-
-                st.warning(
-                f"Fine ₹{fine}"
-                )
-
-# ---------- EDIT ----------
-
-if menu=="Edit":
-
-    df=load_books()
-
-    id=st.text_input("ID")
-
-    if id in df.book_id.values:
-
-        row=df[df.book_id==id]
-
-        title=st.text_input(
-        "Title",
-        row.iloc[0]['title']
-        )
-
-        if st.button("Update"):
-
-            df.loc[
-            df.book_id==id,'title'
-            ]=title
-
-            save_books(df)
-
-            st.success("Updated")
-
 # ---------- DELETE ----------
 
-if menu=="Delete":
+if menu=="Delete Book":
 
     if st.session_state.role!="admin":
 
@@ -370,12 +404,14 @@ if menu=="Delete":
 
         df=load_books()
 
-        id=st.text_input("ID")
+        id=st.text_input("Book ID")
 
         if st.button("Delete"):
 
             df=df[
+
             df.book_id!=id
+
             ]
 
             save_books(df)
@@ -395,14 +431,23 @@ if menu=="History":
 if menu=="Analysis":
 
     df=load_books()
+
     borrow=load_borrow()
 
-    st.bar_chart(
-    df.set_index('title')['quantity']
-    )
+    if not df.empty:
+
+        st.bar_chart(
+
+        df.set_index(
+        'title'
+        )['quantity']
+
+        )
 
     if not borrow.empty:
 
-        issued=borrow.book_id.value_counts()
+        st.bar_chart(
 
-        st.bar_chart(issued)
+        borrow.book_id.value_counts()
+
+        )
